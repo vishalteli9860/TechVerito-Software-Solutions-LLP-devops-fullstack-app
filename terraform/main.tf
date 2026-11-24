@@ -102,7 +102,7 @@ resource "aws_security_group" "k3s" {
     from_port   = 6443
     to_port     = 6443
     protocol    = "tcp"
-    cidr_blocks = ["10.20.0.0/16"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
