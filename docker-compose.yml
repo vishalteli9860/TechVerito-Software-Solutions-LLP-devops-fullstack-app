@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: employees
+      POSTGRES_USER: employee
+      POSTGRES_PASSWORD: employee123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U employee -d employees"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: employee
+      DB_PASSWORD: employee123
+      DB_NAME: employees
+      ALLOWED_ORIGINS: "*"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres-data:

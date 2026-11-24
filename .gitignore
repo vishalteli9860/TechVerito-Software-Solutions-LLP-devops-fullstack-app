@@ -1,2 +1,7 @@
 .idea
 frontend/node_modules
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform/terraform.tfvars
+target-k8s/

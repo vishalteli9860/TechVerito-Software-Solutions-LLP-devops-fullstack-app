@@ -12,7 +12,7 @@ import {
 import axios from "axios";
 import {useEffect, useState} from "react";
 
-const SERVER_URL = process.env.REACT_APP_SERVER_URL
+const SERVER_URL = process.env.REACT_APP_SERVER_URL || "/employees"
 
 function App() {
     const [employees, setEmployees] = useState([])
@@ -32,7 +32,7 @@ function App() {
                 await fetchEmployees()
             })
             .catch(function (error) {
-                console.log(`error adding employee${JSON.stringfy(error)}`);
+                console.log(`error adding employee ${JSON.stringify(error)}`);
             });
         setEmployeeDetails({...employeeDetails, name: '', employeeId: 0})
     }
