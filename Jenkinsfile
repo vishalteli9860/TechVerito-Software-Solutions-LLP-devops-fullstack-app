@@ -58,6 +58,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
                     sh '''
 set -e
+sed -i 's|https://127.0.0.1:6443|https://13.235.244.197:6443|g' "$KUBECONFIG"
 mkdir -p target-k8s
 cp k8s/*.yaml target-k8s/
 sed -i "s|REPLACE_DOCKER_USER|$DOCKER_USER|g" target-k8s/20-backend.yaml target-k8s/21-frontend.yaml
@@ -75,6 +76,7 @@ kubectl rollout status deployment/frontend -n employee-app --timeout=5m
                 withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
                     sh '''
 set -e
+sed -i 's|https://127.0.0.1:6443|https://13.235.244.197:6443|g' "$KUBECONFIG"
 kubectl get pods,svc,ingress -n employee-app
 '''
                 }
