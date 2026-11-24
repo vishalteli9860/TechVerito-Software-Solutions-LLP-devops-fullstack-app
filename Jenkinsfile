@@ -2,12 +2,10 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_USER = 'docker2582'
         BACKEND_IMAGE = "${DOCKER_USER}/devops-backend"
         FRONTEND_IMAGE = "${DOCKER_USER}/devops-frontend"
         IMAGE_TAG = "${BUILD_NUMBER}-${GIT_COMMIT.take(7)}"
-        KUBECONFIG = credentials('k3s-kubeconfig')
     }
 
     options {
@@ -43,21 +41,23 @@ pipeline {
 
         stage('Build and Push Images') {
             steps {
-                sh 'echo "$DOCKERHUB_CREDENTIALS_PSW" | docker login -u "$DOCKERHUB_CREDENTIALS_USR" --password-stdin'
-                sh 'docker build -t $BACKEND_IMAGE:$IMAGE_TAG -t $BACKEND_IMAGE:latest backend'
-                sh 'docker build -t $FRONTEND_IMAGE:$IMAGE_TAG -t $FRONTEND_IMAGE:latest frontend'
-                sh 'docker push $BACKEND_IMAGE:$IMAGE_TAG'
-                sh 'docker push $BACKEND_IMAGE:latest'
-                sh 'docker push $FRONTEND_IMAGE:$IMAGE_TAG'
-                sh 'docker push $FRONTEND_IMAGE:latest'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER_FROM_CREDENTIAL', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                    sh 'echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKER_USER_FROM_CREDENTIAL" --password-stdin'
+                    sh 'docker build -t $BACKEND_IMAGE:$IMAGE_TAG -t $BACKEND_IMAGE:latest backend'
+                    sh 'docker build -t $FRONTEND_IMAGE:$IMAGE_TAG -t $FRONTEND_IMAGE:latest frontend'
+                    sh 'docker push $BACKEND_IMAGE:$IMAGE_TAG'
+                    sh 'docker push $BACKEND_IMAGE:latest'
+                    sh 'docker push $FRONTEND_IMAGE:$IMAGE_TAG'
+                    sh 'docker push $FRONTEND_IMAGE:latest'
+                }
             }
         }
 
         stage('Deploy to K3s') {
             steps {
-                sh '''
+                withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
 set -e
-export KUBECONFIG="$KUBECONFIG"
 mkdir -p target-k8s
 cp k8s/*.yaml target-k8s/
 sed -i "s|REPLACE_DOCKER_USER|$DOCKER_USER|g" target-k8s/20-backend.yaml target-k8s/21-frontend.yaml
@@ -66,20 +66,27 @@ kubectl apply -f target-k8s/
 kubectl rollout status deployment/backend -n employee-app --timeout=5m
 kubectl rollout status deployment/frontend -n employee-app --timeout=5m
 '''
+                }
             }
         }
 
         stage('Verify') {
             steps {
-                sh '''
-export KUBECONFIG="$KUBECONFIG"
+                withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
+set -e
 kubectl get pods,svc,ingress -n employee-app
 '''
+                }
             }
         }
     }
 
     post {
-        always { sh 'docker logout || true' }
+        always {
+            node {
+                sh 'docker logout || true'
+            }
+        }
     }
 }
