@@ -84,9 +84,7 @@ kubectl get pods,svc,ingress -n employee-app
 
     post {
         always {
-            node {
-                sh 'docker logout || true'
-            }
+            sh 'docker logout || true'
         }
     }
 }
